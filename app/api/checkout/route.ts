@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
         // 1. Calculate Total & Validate Items
         let total = 0
-        const validItems = []
+        const validItems: (typeof PRODUCTS_DATA[0] & { quantity: number })[] = []
 
         for (const item of items) {
             const product = PRODUCTS_DATA.find(p => p.id === item.id)
