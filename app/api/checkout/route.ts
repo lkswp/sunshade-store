@@ -1,42 +1,81 @@
+
 import { NextResponse } from "next/server"
+import { PRODUCTS_DATA } from "@/lib/products"
+import { PrismaClient } from "@prisma/client"
 
-export async function POST(req: Request) {
+// Initialize Prisma
+const prisma = new PrismaClient()
+
+export async function POST(request: Request) {
     try {
-        const body = await req.json()
-        const { username, packageId } = body
+        const body = await request.json()
+        const { items, username } = body
 
-        if (!username || !packageId) {
-            return NextResponse.json(
-                { error: "Missing username or packageId" },
-                { status: 400 }
-            )
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return NextResponse.json({ error: "Cart is empty" }, { status: 400 })
+        }
+        if (!username) {
+            return NextResponse.json({ error: "Username is required" }, { status: 400 })
         }
 
-        // Logic to connect to Minecraft Server
-        // This is where you would typically:
-        // 1. Store the transaction in a database (MongoDB, PostgreSQL, etc.)
-        // 2. Send a command to the server via RCON (Remote Console) or a webhook listener plugin.
+        // 1. Calculate Total & Validate Items
+        let total = 0
+        const validItems = []
 
-        console.log(`[SunShade API] Processing purchase: User=${username}, Package=${packageId}`)
+        for (const item of items) {
+            const product = PRODUCTS_DATA.find(p => p.id === item.id)
+            if (product) {
+                total += product.price * (item.quantity || 1)
+                validItems.push({ ...product, quantity: item.quantity || 1 })
+            }
+        }
 
-        // Mocking RCON command execution
-        const command = `give ${username} ${packageId} 1` // Example command
-        console.log(`[SunShade API] Executing server command: ${command}`)
+        // 2. Database Operations (Transaction)
+        const result = await prisma.$transaction(async (tx) => {
+            // Find or Create User
+            let user = await tx.user.findUnique({
+                where: { username }
+            })
 
-        // Simulate network delay
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+            if (!user) {
+                user = await tx.user.create({
+                    data: { username }
+                })
+            }
 
-        return NextResponse.json({
-            success: true,
-            message: "Purchase processed successfully. Items will be delivered shortly.",
-            debug_command: command
+            // Create Order
+            const order = await tx.order.create({
+                data: {
+                    userId: user.id,
+                    total: total,
+                    status: "COMPLETED", // Simplified for demo (skipping payment gateway integration)
+                }
+            })
+
+            // Create Commands
+            for (const item of validItems) {
+                for (let i = 0; i < item.quantity; i++) {
+                    for (const cmd of item.commands) {
+                        await tx.commandQueue.create({
+                            data: {
+                                command: cmd.replace("{player}", username),
+                                playerName: username,
+                                serverScope: item.category,
+                                orderId: order.id,
+                                status: "PENDING"
+                            }
+                        })
+                    }
+                }
+            }
+
+            return order
         })
 
+        return NextResponse.json({ success: true, orderId: result.id })
+
     } catch (error) {
-        console.error("Checkout API Error:", error)
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        )
+        console.error("Checkout Error:", error)
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
 }

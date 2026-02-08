@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String?  @unique
+  username  String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
+model Order {
+  id            Int            @id @default(autoincrement())
+  userId        Int
+  user          User           @relation(fields: [userId], references: [id])
+  total         Float
+  status        String         @default("PENDING") // PENDING, COMPLETED, FAILED
+  paymentMethod String         @default("CREDIT_CARD")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  commands      CommandQueue[]
+}
+
+model CommandQueue {
+  id          Int      @id @default(autoincrement())
+  command     String   @db.Text
+  playerName  String
+  serverScope String   @default("global") // global, survival, anarchy
+  status      String   @default("PENDING") // PENDING, PROCESSED, FAILED
+  orderId     Int?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("store_command_queue") // Maps to the table name expected by the plugin
+}

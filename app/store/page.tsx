@@ -9,36 +9,13 @@ import { useLanguage } from "@/lib/i18n"
 import { useCart } from "@/lib/cart-context"
 import { toast } from "sonner"
 
-// Mock Data
-type ProductData = {
-    id: string
-    price: number
-    category: 'global' | 'survival' | 'anarchy'
-    image?: string
-}
+import { PRODUCTS_DATA } from "@/lib/products"
 
-const PRODUCTS_DATA: ProductData[] = [
-    // Global Items
-    { id: "rank_vip", price: 4.99, category: 'global' },
-    { id: "rank_mvp", price: 9.99, category: 'global' },
-    { id: "coins_1000", price: 0.99, category: 'global' },
-
-    // Survival RPG Items
-    { id: "rpg_key_common", price: 1.99, category: 'survival' },
-    { id: "claim_blocks_1000", price: 2.99, category: 'survival' },
-    { id: "pet_dragon", price: 14.99, category: 'survival' },
-
-    // Semi-Anarchy Items
-    { id: "tnt_kit", price: 4.99, category: 'anarchy' },
-    { id: "obsidian_stack", price: 3.99, category: 'anarchy' },
-    { id: "priority_queue", price: 5.99, category: 'anarchy' },
-]
 
 export default function StorePage() {
-    const [username, setUsername] = useState("")
     const [selectedServer, setSelectedServer] = useState<'survival' | 'anarchy' | null>(null)
     const { t } = useLanguage()
-    const { addItem } = useCart()
+    const { addItem, username, setUsername } = useCart()
 
     // Enrich products with translations
     const products = PRODUCTS_DATA.map(p => ({

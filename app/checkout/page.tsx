@@ -22,7 +22,7 @@ import {
 
 export default function CheckoutPage() {
     const { t } = useLanguage()
-    const { items, removeItem, total, clearCart } = useCart()
+    const { items, removeItem, total, clearCart, username } = useCart()
     const [isProcessing, setIsProcessing] = useState(false)
     const [coupon, setCoupon] = useState("")
     const [isSuccess, setIsSuccess] = useState(false)
@@ -38,18 +38,48 @@ export default function CheckoutPage() {
             return
         }
 
+        if (!username) {
+            toast.error("Username Required", {
+                description: "Please go back to the store and enter your Minecraft username.",
+                style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
+            })
+            return
+        }
+
         setIsProcessing(true)
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        try {
+            const response = await fetch('/api/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    items: items,
+                    username: username
+                }),
+            })
 
-        setIsProcessing(false)
-        setIsSuccess(true)
-        clearCart()
-        toast.success(t('checkout', 'success_title'), {
-            description: t('checkout', 'success_msg'),
-            style: { background: '#051405', borderColor: '#98D121', color: 'white' }
-        })
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Checkout failed')
+            }
+
+            setIsProcessing(false)
+            setIsSuccess(true)
+            clearCart()
+            toast.success(t('checkout', 'success_title'), {
+                description: t('checkout', 'success_msg'),
+                style: { background: '#051405', borderColor: '#98D121', color: 'white' }
+            })
+        } catch (error) {
+            setIsProcessing(false)
+            toast.error("Checkout Failed", {
+                description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+                style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
+            })
+        }
     }
 
     if (isSuccess) {
