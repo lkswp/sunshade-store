@@ -2,6 +2,10 @@
 import { NextResponse } from "next/server"
 import { PRODUCTS_DATA } from "@/lib/products"
 import { PrismaClient } from "@prisma/client"
+import { MercadoPagoConfig, Payment } from 'mercadopago';
+
+// Initialize Mercado Pago
+const client = new MercadoPagoConfig({ accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN! });
 
 // Initialize Prisma
 const prisma = new PrismaClient()
@@ -43,7 +47,28 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "No valid items found" }, { status: 400 })
         }
 
-        // 2. Database Operations (Transaction)
+        // 2. Mercado Pago Payment
+        const payment = new Payment(client);
+
+        // Helper to get product names
+        const description = validItems.map(i => `${i.quantity}x ${i.product.name}`).join(', ').substring(0, 200);
+
+        const paymentData = await payment.create({
+            body: {
+                transaction_amount: total,
+                description: description,
+                payment_method_id: 'pix',
+                payer: {
+                    email: 'buyer@test.com'
+                }
+            }
+        });
+
+        if (!paymentData || !paymentData.id) {
+            throw new Error("Failed to create payment with Mercado Pago");
+        }
+
+        // 3. Database Operations (Transaction)
         const result = await prisma.$transaction(async (tx: any) => {
             // Find or Create User
             let user = await tx.user.findUnique({
@@ -56,39 +81,28 @@ export async function POST(request: Request) {
                 })
             }
 
-            // Create Order
+            // Create Order PENDING
             const order = await tx.order.create({
                 data: {
                     userId: user.id,
                     total: total,
-                    status: "COMPLETED",
+                    status: "PENDING",
+                    paymentMethod: "PIX",
+                    paymentId: paymentData.id!.toString(),
+                    ticketUrl: paymentData.point_of_interaction?.transaction_data?.qr_code,
+                    items: validItems // Save items for later fulfillment
                 }
             })
-
-            // Create Commands
-            for (const { product, quantity } of validItems) {
-                const commands = product.commands as string[] // Type assertion for JSON
-                if (commands && Array.isArray(commands)) {
-                    for (let i = 0; i < quantity; i++) {
-                        for (const cmd of commands) {
-                            await tx.commandQueue.create({
-                                data: {
-                                    command: cmd.replace(/{player}/g, username),
-                                    playerName: username,
-                                    serverScope: product.category,
-                                    orderId: order.id,
-                                    status: "PENDING"
-                                }
-                            })
-                        }
-                    }
-                }
-            }
 
             return order
         })
 
-        return NextResponse.json({ success: true, orderId: result.id })
+        return NextResponse.json({
+            success: true,
+            orderId: result.id,
+            qrCode: paymentData.point_of_interaction?.transaction_data?.qr_code,
+            qrCodeBase64: paymentData.point_of_interaction?.transaction_data?.qr_code_base64
+        })
 
     } catch (error) {
         console.error("Checkout Error:", error)
