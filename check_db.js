@@ -11,10 +11,29 @@ async function main() {
             console.log(`- ${p.name} (${p.category}) [Img: ${p.image}]`);
         });
 
-        const commands = await prisma.commandQueue.findMany({
-            where: { status: 'PENDING' },
-            include: { order: true }
+        const orders = await prisma.order.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+            include: { commands: true }
         });
+
+        console.log("\n=== Last 5 Orders ===");
+        if (orders.length === 0) {
+            console.log("No orders found.");
+        } else {
+            orders.forEach(o => {
+                console.log(`[Order #${o.id}] Status: ${o.status} | Total: ${o.total} | Payment: ${o.paymentMethod} (${o.paymentId})`);
+                console.log(`   Commands Generated: ${o.commands.length}`);
+                if (o.commands.length > 0) {
+                    o.commands.forEach(c => console.log(`   - [${c.status}] ${c.command}`));
+                }
+            });
+        }
+
+        const commands = await prisma.commandQueue.findMany({
+            where: { status: 'PENDING' }
+        });
+
         console.log("\n=== Pending Commands (Ready for Plugin) ===");
         console.log(`Total Pending: ${commands.length}`);
         if (commands.length > 0) {

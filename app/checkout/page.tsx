@@ -33,16 +33,16 @@ export default function CheckoutPage() {
 
     const handleCheckout = async () => {
         if (!agreedToTerms) {
-            toast.error("Terms Required", {
-                description: "Please agree to the Terms of Service to proceed.",
+            toast.error(t('checkout', 'terms_required_title'), {
+                description: t('checkout', 'terms_required_msg'),
                 style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
             })
             return
         }
 
         if (!username) {
-            toast.error("Username Required", {
-                description: "Please go back to the store and enter your Minecraft username.",
+            toast.error(t('checkout', 'username_required_title'), {
+                description: t('checkout', 'username_required_msg'),
                 style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
             })
             return
@@ -82,8 +82,8 @@ export default function CheckoutPage() {
             })
         } catch (error) {
             setIsProcessing(false)
-            toast.error("Checkout Failed", {
-                description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+            toast.error(t('checkout', 'checkout_failed'), {
+                description: error instanceof Error ? error.message : t('checkout', 'generic_error'),
                 style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
             })
         }
@@ -99,8 +99,8 @@ export default function CheckoutPage() {
                             <div className="size-16 bg-[#00BFA5]/20 rounded-full flex items-center justify-center mb-6 mx-auto">
                                 <span className="text-3xl">💠</span>
                             </div>
-                            <h1 className="text-3xl font-bold text-white mb-2">Scan to Pay</h1>
-                            <p className="text-gray-400 mb-6">Open your bank app and scan the QR Code.</p>
+                            <h1 className="text-3xl font-bold text-white mb-2">{t('checkout', 'scan_pay')}</h1>
+                            <p className="text-gray-400 mb-6">{t('checkout', 'scan_desc')}</p>
 
                             <div className="bg-white p-4 rounded-xl mb-6 inline-block">
                                 <img
@@ -119,15 +119,15 @@ export default function CheckoutPage() {
                                     className="w-full border-[#00BFA5] text-[#00BFA5] hover:bg-[#00BFA5]/10"
                                     onClick={() => {
                                         navigator.clipboard.writeText(pixData.code)
-                                        toast.success("PIX Code Copied!")
+                                        toast.success(t('checkout', 'pix_copied'))
                                     }}
                                 >
-                                    Copy PIX Code
+                                    {t('checkout', 'copy_pix')}
                                 </Button>
                             </div>
 
                             <p className="mt-6 text-sm text-gray-500">
-                                Once paid, you will receive your items verify in-game!
+                                {t('checkout', 'paid_verify')}
                             </p>
                         </div>
                     ) : (
@@ -234,8 +234,8 @@ export default function CheckoutPage() {
                                             className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === "pix" ? "border-[#00BFA5] bg-[#00BFA5]/10 text-white" : "border-white/10 bg-black/20 text-gray-400 hover:bg-white/5"}`}
                                         >
                                             <span className="text-3xl">💠</span>
-                                            <span className="text-lg font-bold">PIX (Mercado Pago)</span>
-                                            <span className="text-xs text-[#00BFA5] font-mono">INSTANT APPROVAL</span>
+                                            <span className="text-lg font-bold">{t('checkout', 'pix_method')}</span>
+                                            <span className="text-xs text-[#00BFA5] font-mono">{t('checkout', 'instant_approval')}</span>
                                         </button>
                                     </div>
                                 </div>
