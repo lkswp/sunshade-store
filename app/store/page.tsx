@@ -87,12 +87,7 @@ export default function StorePage() {
         }
     }
 
-    const filteredProducts = products.filter(p => {
-        if (p.category === 'global') return true;
-        if (selectedServer === 'survival') return p.category === 'survival' || p.category === 'normal';
-        if (selectedServer === 'anarchy') return p.category === 'anarchy' || p.category === 'pvp';
-        return false;
-    })
+    const filteredProducts = products.filter(p => p.category === 'global' || p.category === selectedServer)
 
     return (
         <div className="min-h-screen bg-background flex flex-col font-sans">
