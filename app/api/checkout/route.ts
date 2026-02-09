@@ -11,6 +11,11 @@ const client = new MercadoPagoConfig({ accessToken: process.env.MERCADO_PAGO_ACC
 const prisma = new PrismaClient()
 
 export async function POST(request: Request) {
+    if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+        console.error("Missing MERCADO_PAGO_ACCESS_TOKEN");
+        return NextResponse.json({ error: "Server Configuration Error: Missing Payment Token" }, { status: 500 });
+    }
+
     try {
         const body = await request.json()
         const { items, username } = body
@@ -105,7 +110,8 @@ export async function POST(request: Request) {
         })
 
     } catch (error) {
-        console.error("Checkout Error:", error)
-        return NextResponse.json({ error: "Checkout failed" }, { status: 500 })
+        console.error("Checkout Error Details:", error)
+        const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+        return NextResponse.json({ error: errorMessage }, { status: 500 })
     }
 }
