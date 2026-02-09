@@ -41,3 +41,16 @@ model CommandQueue {
 
   @@map("store_command_queue") // Maps to the table name expected by the plugin
 }
+
+model Product {
+  id          String   @id
+  name        String
+  description String   @db.Text
+  price       Float
+  category    String // global, survival, anarchy
+  image       String?
+  commands    Json
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

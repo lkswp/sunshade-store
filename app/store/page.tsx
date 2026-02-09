@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Navbar } from "@/components/ui/navbar"
 import { Footer } from "@/components/ui/footer"
 import { ProductCard } from "@/components/ui/product-card"
@@ -8,21 +8,44 @@ import { PlayerInput } from "@/components/features/PlayerInput"
 import { useLanguage } from "@/lib/i18n"
 import { useCart } from "@/lib/cart-context"
 import { toast } from "sonner"
+import { Loader2 } from "lucide-react"
 
-import { PRODUCTS_DATA } from "@/lib/products"
-
+interface Product {
+    id: string
+    name: string
+    description: string
+    price: number
+    category: string
+    image?: string | null
+    commands: any
+}
 
 export default function StorePage() {
     const [selectedServer, setSelectedServer] = useState<'survival' | 'anarchy' | null>(null)
     const { t } = useLanguage()
     const { addItem, username, setUsername } = useCart()
+    const [products, setProducts] = useState<Product[]>([])
+    const [loading, setLoading] = useState(true)
 
-    // Enrich products with translations
-    const products = PRODUCTS_DATA.map(p => ({
-        ...p,
-        name: t('products', `${p.id}_name`),
-        description: t('products', `${p.id}_desc`)
-    }))
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const res = await fetch('/api/products')
+                if (!res.ok) throw new Error('Failed to fetch products')
+                const data = await res.json()
+                setProducts(data)
+            } catch (error) {
+                console.error("Error loading products:", error)
+                toast.error("Failed to load products. Please try again later.", {
+                    style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
+                })
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchProducts()
+    }, [])
 
     const handleAddToCart = (productId: string) => {
         if (!selectedServer) {
@@ -47,9 +70,14 @@ export default function StorePage() {
 
         const product = products.find(p => p.id === productId)
         if (product) {
-            addItem(product)
+            addItem({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                image: product.image || undefined,
+            })
             toast.success(t('store', 'add_to_cart'), {
-                description: `${product.name} ${t('store', 'success_msg').replace('Compra iniciada para o usuário', 'adicionado ao carrinho').replace('Purchase initiated for user', 'added to cart')}`, // Quick fix for toast msg, ideally separate naming
+                description: `${product.name} ${t('store', 'success_msg').replace('Compra iniciada para o usuário', 'adicionado ao carrinho').replace('Purchase initiated for user', 'added to cart')}`,
                 style: { background: '#051405', borderColor: '#98D121', color: 'white' },
                 action: {
                     label: t('nav', 'cart'),
@@ -154,7 +182,11 @@ export default function StorePage() {
                             {t('store', 'step2')}
                         </h2>
 
-                        {selectedServer ? (
+                        {loading ? (
+                            <div className="flex justify-center py-20">
+                                <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                            </div>
+                        ) : selectedServer ? (
                             <div className="space-y-10">
                                 {/* Category Label */}
                                 <div className="flex items-center gap-4">
@@ -166,13 +198,18 @@ export default function StorePage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                                    {filteredProducts.map((product) => (
+                                    {filteredProducts.length > 0 ? filteredProducts.map((product) => (
                                         <ProductCard
                                             key={product.id}
                                             {...product}
+                                            image={product.image || undefined}
                                             onBuy={handleAddToCart}
                                         />
-                                    ))}
+                                    )) : (
+                                        <div className="col-span-full text-center py-10 text-gray-500">
+                                            No products found for this server.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ) : (
