@@ -18,20 +18,33 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Username is required" }, { status: 400 })
         }
 
-        // 1. Calculate Total & Validate Items
+        // 1. Calculate Total & Validate Items from DB
+        const itemIds = items.map((i: any) => i.id)
+        const dbProducts = await prisma.product.findMany({
+            where: {
+                id: { in: itemIds },
+                active: true
+            }
+        })
+
         let total = 0
-        const validItems: (typeof PRODUCTS_DATA[0] & { quantity: number })[] = []
+        const validItems: { product: typeof dbProducts[0], quantity: number }[] = []
 
         for (const item of items) {
-            const product = PRODUCTS_DATA.find(p => p.id === item.id)
+            const product = dbProducts.find(p => p.id === item.id)
             if (product) {
-                total += product.price * (item.quantity || 1)
-                validItems.push({ ...product, quantity: item.quantity || 1 })
+                const quantity = item.quantity || 1
+                total += product.price * quantity
+                validItems.push({ product, quantity })
             }
         }
 
+        if (validItems.length === 0) {
+            return NextResponse.json({ error: "No valid items found" }, { status: 400 })
+        }
+
         // 2. Database Operations (Transaction)
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx: any) => {
             // Find or Create User
             let user = await tx.user.findUnique({
                 where: { username }
@@ -48,23 +61,26 @@ export async function POST(request: Request) {
                 data: {
                     userId: user.id,
                     total: total,
-                    status: "COMPLETED", // Simplified for demo (skipping payment gateway integration)
+                    status: "COMPLETED",
                 }
             })
 
             // Create Commands
-            for (const item of validItems) {
-                for (let i = 0; i < item.quantity; i++) {
-                    for (const cmd of item.commands) {
-                        await tx.commandQueue.create({
-                            data: {
-                                command: cmd.replace("{player}", username),
-                                playerName: username,
-                                serverScope: item.category,
-                                orderId: order.id,
-                                status: "PENDING"
-                            }
-                        })
+            for (const { product, quantity } of validItems) {
+                const commands = product.commands as string[] // Type assertion for JSON
+                if (commands && Array.isArray(commands)) {
+                    for (let i = 0; i < quantity; i++) {
+                        for (const cmd of commands) {
+                            await tx.commandQueue.create({
+                                data: {
+                                    command: cmd.replace(/{player}/g, username),
+                                    playerName: username,
+                                    serverScope: product.category,
+                                    orderId: order.id,
+                                    status: "PENDING"
+                                }
+                            })
+                        }
                     }
                 }
             }
@@ -76,6 +92,6 @@ export async function POST(request: Request) {
 
     } catch (error) {
         console.error("Checkout Error:", error)
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+        return NextResponse.json({ error: "Checkout failed" }, { status: 500 })
     }
 }
