@@ -26,7 +26,7 @@ export default function CheckoutPage() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [coupon, setCoupon] = useState("")
     const [isSuccess, setIsSuccess] = useState(false)
-    const [paymentMethod, setPaymentMethod] = useState("card")
+    const [paymentMethod, setPaymentMethod] = useState("pix")
     const [agreedToTerms, setAgreedToTerms] = useState(false)
 
     const [pixData, setPixData] = useState<{ code: string, base64: string } | null>(null)
@@ -228,20 +228,14 @@ export default function CheckoutPage() {
 
                                 <div className="space-y-4 mb-8">
                                     <label className="text-sm font-bold text-gray-400 uppercase">Payment Method</label>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4">
                                         <button
-                                            onClick={() => setPaymentMethod("card")}
-                                            className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === "card" ? "border-primary bg-primary/10 text-white" : "border-white/10 bg-black/20 text-gray-400 hover:bg-white/5"}`}
+                                            onClick={() => setPaymentMethod("pix")}
+                                            className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === "pix" ? "border-[#00BFA5] bg-[#00BFA5]/10 text-white" : "border-white/10 bg-black/20 text-gray-400 hover:bg-white/5"}`}
                                         >
-                                            <CreditCard className="size-6" />
-                                            <span className="text-xs font-bold">Credit Card</span>
-                                        </button>
-                                        <button
-                                            onClick={() => setPaymentMethod("paypal")}
-                                            className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === "paypal" ? "border-[#0070BA] bg-[#0070BA]/10 text-white" : "border-white/10 bg-black/20 text-gray-400 hover:bg-white/5"}`}
-                                        >
-                                            <span className="font-bold italic text-lg tracking-tighter">Pay<span className="text-[#0070BA]">Pal</span></span>
-                                            <span className="text-xs font-bold">PayPal</span>
+                                            <span className="text-3xl">💠</span>
+                                            <span className="text-lg font-bold">PIX (Mercado Pago)</span>
+                                            <span className="text-xs text-[#00BFA5] font-mono">INSTANT APPROVAL</span>
                                         </button>
                                     </div>
                                 </div>
