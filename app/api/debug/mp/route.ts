@@ -24,9 +24,9 @@ export async function GET() {
             ],
             // notification_url: "https://your-site.com/...", // Omitted for simple test
             back_urls: {
-                success: "http://localhost:3000/success",
-                failure: "http://localhost:3000/failure",
-                pending: "http://localhost:3000/pending"
+                success: "https://www.google.com/success", // Must be valid URL for auto_return
+                failure: "https://www.google.com/failure",
+                pending: "https://www.google.com/pending"
             },
             auto_return: "approved" as const,
         };

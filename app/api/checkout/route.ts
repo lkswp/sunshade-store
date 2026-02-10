@@ -101,9 +101,12 @@ export async function POST(request: Request) {
         })
 
         // Determine Base URL for callbacks
-        // Determine Base URL for callbacks
-        // IMPORTANT: Use NEXT_PUBLIC_BASE_URL (or Vercel defaults) for webhook
-        const origin = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) || request.headers.get("origin") || "http://localhost:3000";
+        // IMPORTANT: Ensure it has a protocol (https://)
+        let origin = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) || request.headers.get("origin") || "http://localhost:3000";
+
+        if (!origin.startsWith("http")) {
+            origin = `https://${origin}`;
+        }
 
         // 3. Handle Payment based on Method
         if (body.paymentMethod === 'PIX') {
