@@ -21,26 +21,52 @@ import {
 } from "@/components/ui/dialog"
 
 export default function CheckoutPage() {
-    const { t } = useLanguage()
     const { items, removeItem, total, clearCart, username } = useCart()
     const [isProcessing, setIsProcessing] = useState(false)
-    const [coupon, setCoupon] = useState("")
+    const [couponCode, setCouponCode] = useState("")
+    const [discount, setDiscount] = useState(0)
+    const [couponApplied, setCouponApplied] = useState(false)
     const [agreedToTerms, setAgreedToTerms] = useState(false)
     const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CHECKOUT_PRO'>('PIX')
     const [pixData, setPixData] = useState<{ qrCode: string, qrCodeBase64: string, ticketUrl: string } | null>(null)
 
+    const finalTotal = Math.max(0, total - (total * (discount / 100)))
+
+    const handleApplyCoupon = async () => {
+        if (!couponCode) return
+        setIsProcessing(true)
+        try {
+            const res = await fetch(`/api/checkout/validate-coupon?code=${couponCode}`)
+            const data = await res.json()
+
+            if (!res.ok) throw new Error(data.error || "Cupom inválido")
+
+            setDiscount(data.discount)
+            setCouponApplied(true)
+            toast.success(`Cupom aplicado: ${data.discount}% de desconto!`, {
+                style: { background: '#051405', borderColor: '#98D121', color: 'white' }
+            })
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Erro ao aplicar cupom")
+            setDiscount(0)
+            setCouponApplied(false)
+        } finally {
+            setIsProcessing(false)
+        }
+    }
+
     const handleCheckout = async () => {
         if (!agreedToTerms) {
-            toast.error(t('checkout', 'terms_required_title'), {
-                description: t('checkout', 'terms_required_msg'),
+            toast.error("Termos Necessários", {
+                description: "Você precisa aceitar os termos para continuar.",
                 style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
             })
             return
         }
 
         if (!username) {
-            toast.error(t('checkout', 'username_required_title'), {
-                description: t('checkout', 'username_required_msg'),
+            toast.error("Username Necessário", {
+                description: "Por favor, digite seu nick do Minecraft.",
                 style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
             })
             return
@@ -58,14 +84,15 @@ export default function CheckoutPage() {
                 body: JSON.stringify({
                     items: items,
                     username: username,
-                    paymentMethod: paymentMethod // Send selected method
+                    paymentMethod: paymentMethod,
+                    couponCode: couponApplied ? couponCode : null // Send coupon if applied
                 }),
             })
 
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error || 'Checkout failed')
+                throw new Error(data.error || 'Falha no Checkout')
             }
 
             if (data.url) {
@@ -80,13 +107,13 @@ export default function CheckoutPage() {
                     style: { background: '#051405', borderColor: '#98D121', color: 'white' }
                 })
             } else {
-                throw new Error("Invalid response from server")
+                throw new Error("Resposta inválida do servidor")
             }
 
         } catch (error) {
             setIsProcessing(false)
-            toast.error(t('checkout', 'checkout_failed'), {
-                description: error instanceof Error ? error.message : t('checkout', 'generic_error'),
+            toast.error("Erro no Checkout", {
+                description: error instanceof Error ? error.message : "Erro genérico",
                 style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
             })
         }
@@ -108,7 +135,7 @@ export default function CheckoutPage() {
             <main className="container flex-1 py-16 px-4">
                 <h1 className="text-4xl font-bold text-white mb-8 flex items-center gap-3">
                     <ShoppingBag className="size-8 text-primary" />
-                    {t('checkout', 'title')}
+                    Checkout
                 </h1>
 
                 {/* PIX MODAL if pixData exists */}
@@ -171,9 +198,9 @@ export default function CheckoutPage() {
 
                 {items.length === 0 ? (
                     <div className="text-center py-20 bg-card/30 rounded-3xl border border-white/5">
-                        <p className="text-2xl text-gray-400 mb-6">{t('checkout', 'empty_cart')}</p>
+                        <p className="text-2xl text-gray-400 mb-6">Seu carrinho está vazio</p>
                         <Link href="/store">
-                            <Button variant="minecraft">{t('checkout', 'go_store')}</Button>
+                            <Button variant="minecraft">Ir para Loja</Button>
                         </Link>
                     </div>
                 ) : (
@@ -182,7 +209,7 @@ export default function CheckoutPage() {
                         <div className="lg:col-span-2 space-y-6">
                             <div className="bg-card/30 rounded-3xl border border-white/5 overflow-hidden">
                                 <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
-                                    <h2 className="font-bold text-lg text-white">{t('checkout', 'your_items')} ({items.length})</h2>
+                                    <h2 className="font-bold text-lg text-white">Seus Itens ({items.length})</h2>
                                 </div>
                                 <div className="divide-y divide-white/5">
                                     {items.map((item) => (
@@ -192,7 +219,7 @@ export default function CheckoutPage() {
                                             </div>
                                             <div className="flex-1">
                                                 <h3 className="text-lg font-bold text-white">{item.name}</h3>
-                                                <p className="text-sm text-gray-400">{t('checkout', 'quantity')}: {item.quantity}</p>
+                                                <p className="text-sm text-gray-400">Quantidade: {item.quantity}</p>
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-lg font-bold text-white mb-2">R${(item.price * item.quantity).toFixed(2)}</div>
@@ -202,7 +229,7 @@ export default function CheckoutPage() {
                                                     onClick={() => removeItem(item.id)}
                                                     className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                                                 >
-                                                    <Trash2 className="size-4 mr-2" /> {t('checkout', 'remove')}
+                                                    <Trash2 className="size-4 mr-2" /> Remover
                                                 </Button>
                                             </div>
                                         </div>
@@ -214,21 +241,23 @@ export default function CheckoutPage() {
                         {/* Order Summary */}
                         <div className="space-y-6">
                             <div className="bg-card/30 rounded-3xl border border-white/5 p-8 sticky top-24">
-                                <h2 className="font-bold text-xl text-white mb-6">{t('checkout', 'order_summary')}</h2>
+                                <h2 className="font-bold text-xl text-white mb-6">Resumo do Pedido</h2>
 
                                 <div className="space-y-4 mb-8">
                                     <div className="flex justify-between text-gray-400">
-                                        <span>{t('checkout', 'subtotal')}</span>
+                                        <span>Subtotal</span>
                                         <span>R${total.toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between text-gray-400">
-                                        <span>{t('checkout', 'taxes')}</span>
-                                        <span>R$0.00</span>
-                                    </div>
+                                    {discount > 0 && (
+                                        <div className="flex justify-between text-green-400">
+                                            <span>Desconto ({discount}%)</span>
+                                            <span>-R${(total * (discount / 100)).toFixed(2)}</span>
+                                        </div>
+                                    )}
                                     <div className="h-px bg-white/10"></div>
                                     <div className="flex justify-between text-xl font-bold text-white">
-                                        <span>{t('checkout', 'total')}</span>
-                                        <span className="text-primary">R${total.toFixed(2)}</span>
+                                        <span>Total</span>
+                                        <span className="text-primary">R${finalTotal.toFixed(2)}</span>
                                     </div>
                                 </div>
 
@@ -263,12 +292,20 @@ export default function CheckoutPage() {
 
                                 <div className="flex gap-2 mb-8">
                                     <Input
-                                        placeholder="Coupon Code"
-                                        value={coupon}
-                                        onChange={(e) => setCoupon(e.target.value)}
+                                        placeholder="CUPOM DE DESCONTO"
+                                        value={couponCode}
+                                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                                         className="bg-black/20 border-white/10 text-white"
+                                        disabled={couponApplied}
                                     />
-                                    <Button variant="outline" className="border-white/10 text-gray-300 hover:bg-white/5">Apply</Button>
+                                    <Button
+                                        variant="outline"
+                                        className="border-white/10 text-gray-300 hover:bg-white/5"
+                                        onClick={handleApplyCoupon}
+                                        disabled={couponApplied || !couponCode || isProcessing}
+                                    >
+                                        {couponApplied ? <CheckCircle className="size-4 text-green-500" /> : "Aplicar"}
+                                    </Button>
                                 </div>
 
                                 {/* Terms Agreement Section */}
@@ -282,42 +319,30 @@ export default function CheckoutPage() {
                                             className="mt-1 size-4 rounded border-white/30 bg-black/50 text-primary focus:ring-primary/50"
                                         />
                                         <label htmlFor="terms" className="text-sm text-gray-300 leading-snug cursor-pointer select-none">
-                                            {t('checkout', 'terms_agreement')} <br />
+                                            Eu aceito os <br />
                                             <Dialog>
                                                 <DialogTrigger asChild>
                                                     <span className="text-primary hover:underline cursor-pointer font-bold inline-flex items-center gap-1">
-                                                        <FileText className="size-3" /> {t('checkout', 'terms_link')}
+                                                        <FileText className="size-3" /> Termos de Serviço
                                                     </span>
                                                 </DialogTrigger>
                                                 <DialogContent className="bg-[#1a0b2e] border-white/10 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
                                                     <DialogHeader>
-                                                        <DialogTitle className="text-2xl font-bold mb-4">{t('terms', 'title')}</DialogTitle>
-                                                        <DialogDescription className="text-gray-400 mb-4">{t('terms', 'intro')}</DialogDescription>
+                                                        <DialogTitle className="text-2xl font-bold mb-4">Termos de Serviço</DialogTitle>
+                                                        <DialogDescription className="text-gray-400 mb-4">Leia com atenção antes de comprar.</DialogDescription>
                                                     </DialogHeader>
                                                     <div className="space-y-6 text-sm text-gray-300 leading-relaxed pr-2">
                                                         <section>
-                                                            <h3 className="text-white font-bold text-base mb-2">{t('terms', 'section1_title')}</h3>
-                                                            <p>{t('terms', 'section1_content')}</p>
+                                                            <h3 className="text-white font-bold text-base mb-2">1. Entregas</h3>
+                                                            <p>As entregas são automáticas e ocorrem em até 5 minutos após a confirmação do pagamento.</p>
                                                         </section>
                                                         <section>
-                                                            <h3 className="text-white font-bold text-base mb-2">{t('terms', 'section2_title')}</h3>
-                                                            <p>{t('terms', 'section2_content')}</p>
+                                                            <h3 className="text-white font-bold text-base mb-2">2. Reembolsos</h3>
+                                                            <p>Por se tratar de bens digitais, não oferecemos reembolsos após a ativação dos itens no jogo, exceto em casos de falha técnica comprovada.</p>
                                                         </section>
                                                         <section>
-                                                            <h3 className="text-white font-bold text-base mb-2">{t('terms', 'section3_title')}</h3>
-                                                            <p>{t('terms', 'section3_content')}</p>
-                                                        </section>
-                                                        <section>
-                                                            <h3 className="text-white font-bold text-base mb-2">{t('terms', 'section4_title')}</h3>
-                                                            <p>{t('terms', 'section4_content')}</p>
-                                                        </section>
-                                                        <section>
-                                                            <h3 className="text-white font-bold text-base mb-2">{t('terms', 'section5_title')}</h3>
-                                                            <p>{t('terms', 'section5_content')}</p>
-                                                        </section>
-                                                        <section>
-                                                            <h3 className="text-white font-bold text-base mb-2">{t('terms', 'section6_title')}</h3>
-                                                            <p>{t('terms', 'section6_content')}</p>
+                                                            <h3 className="text-white font-bold text-base mb-2">3. Regras</h3>
+                                                            <p>O uso de itens para violar as regras do servidor resultará em banimento sem reembolso.</p>
                                                         </section>
                                                     </div>
                                                 </DialogContent>
@@ -332,7 +357,7 @@ export default function CheckoutPage() {
                                     onClick={handleCheckout}
                                     disabled={isProcessing}
                                 >
-                                    {isProcessing ? t('checkout', 'processing') : t('checkout', 'complete_purchase')}
+                                    {isProcessing ? "Processando..." : "Finalizar Compra"}
                                 </Button>
 
                                 <div className="mt-4 flex justify-center gap-4 opacity-50">
@@ -341,7 +366,7 @@ export default function CheckoutPage() {
                                     <span className="text-2xl">📄</span>
                                 </div>
                                 <p className="text-center text-xs text-gray-500 mt-2">
-                                    Secured by Mercado Pago
+                                    Seguro via Mercado Pago
                                 </p>
 
                             </div>

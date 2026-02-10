@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json()
-        const { items, username } = body
+        const { items, username, couponCode } = body
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return NextResponse.json({ error: "Cart is empty" }, { status: 400 })
@@ -52,6 +52,33 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "No valid items found" }, { status: 400 })
         }
 
+        // --- APPLY COUPON DISCOUNT ---
+        let discount = 0
+        if (couponCode) {
+            const coupon = await prisma.coupon.findUnique({
+                where: { code: couponCode }
+            })
+
+            // Basic validation again to be safe
+            if (coupon && coupon.active) {
+                const now = new Date()
+                const isExpired = coupon.expiresAt && now > coupon.expiresAt
+                const isLimitReached = coupon.maxUses && coupon.uses >= coupon.maxUses
+
+                if (!isExpired && !isLimitReached) {
+                    discount = coupon.discount
+                    // Update usage
+                    await prisma.coupon.update({
+                        where: { id: coupon.id },
+                        data: { uses: { increment: 1 } }
+                    })
+                }
+            }
+        }
+
+        const finalTotal = Math.max(0, total - (total * (discount / 100)))
+        // -----------------------------
+
         // 2. Create Order PENDING in Database
         let user = await prisma.user.findUnique({
             where: { username }
@@ -66,7 +93,7 @@ export async function POST(request: Request) {
         const order = await prisma.order.create({
             data: {
                 userId: user.id,
-                total: total,
+                total: finalTotal, // Save discounted total
                 status: "PENDING",
                 paymentMethod: body.paymentMethod === 'PIX' ? 'PIX' : 'CHECKOUT_PRO',
                 items: validItems
@@ -82,8 +109,8 @@ export async function POST(request: Request) {
             const payment = new Payment(client);
             const paymentData = await payment.create({
                 body: {
-                    transaction_amount: total,
-                    description: "Sunshade Store",
+                    transaction_amount: finalTotal, // Use discounted total
+                    description: `Sunshade Store - Order #${order.id}`,
                     payment_method_id: 'pix',
                     external_reference: order.id.toString(),
                     payer: {
@@ -116,14 +143,23 @@ export async function POST(request: Request) {
 
             const preferenceData = await preference.create({
                 body: {
-                    items: validItems.map(item => ({
-                        id: item.product.id,
-                        title: item.product.name,
-                        quantity: item.quantity,
-                        unit_price: item.product.price,
-                        currency_id: 'BRL',
-                        category_id: 'virtual_goods'
-                    })),
+                    items: validItems.map(item => {
+                        // Apply discount proportionally to items for MP display or adds a discount item?
+                        // Easiest is to add a generic "Discount" item with negative price or adjust unit prices.
+                        // However, Mercado Pago doesn't support negative unit_price easily in all flows.
+                        // Best approach: Adjust unit prices proportionally.
+                        const originalPrice = item.product.price
+                        const discountedPrice = originalPrice - (originalPrice * (discount / 100))
+
+                        return {
+                            id: item.product.id,
+                            title: item.product.name,
+                            quantity: item.quantity,
+                            unit_price: Number(discountedPrice.toFixed(2)), // Ensure 2 decimals
+                            currency_id: 'BRL',
+                            category_id: 'virtual_goods'
+                        }
+                    }),
                     payer: {
                         email: "test_user@test.com"
                     },
@@ -134,7 +170,7 @@ export async function POST(request: Request) {
                         pending: `${origin}/checkout?status=pending`
                     },
                     auto_return: "approved",
-                    binary_mode: true,
+                    binary_mode: true, // IMPORTANT: Forces instant payment decision (good for avoiding pending)
                     statement_descriptor: "SUNSHADE STORE"
                 }
             });

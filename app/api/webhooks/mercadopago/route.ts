@@ -1,6 +1,6 @@
 
 import { NextResponse } from "next/server"
-import { MercadoPagoConfig, Payment } from 'mercadopago';
+import { MercadoPagoConfig, Payment, MerchantOrder } from 'mercadopago';
 import { PrismaClient } from "@prisma/client"
 import { fulfillOrder } from "@/lib/order-service"
 
@@ -50,10 +50,32 @@ export async function POST(req: Request) {
                 }
             }
         } else if (eventType === 'merchant_order') {
-            // Some flows (like Checkout Pro sometimes) trigger merchant_order updates
-            // We can fetch the merchant order to see associated payments
-            // For now, logging it is enough, as 'payment' event usually follows or accompanies it.
-            console.log("Merchant Order event received (skipped for now, relying on payment event)");
+            const mo = new MerchantOrder(client);
+            const orderInfo = await mo.get({ merchantOrderId: dataId });
+
+            if (orderInfo) {
+                const orderId = Number(orderInfo.external_reference);
+                const paidAmount = orderInfo.payments?.reduce((acc, p) => p.status === 'approved' ? acc + (p.transaction_amount || 0) : acc, 0) || 0;
+                const totalAmount = orderInfo.total_amount || 0;
+
+                console.log(`Merchant Order: ID=${dataId}, InternalOrder=${orderId}, Paid=${paidAmount}/${totalAmount}`);
+
+                if (orderId && !isNaN(orderId) && paidAmount >= totalAmount && totalAmount > 0) {
+                    // Check if already paid to avoid redundant updates
+                    const currentOrder = await prisma.order.findUnique({ where: { id: orderId } });
+                    if (currentOrder && currentOrder.status !== 'PAID' && currentOrder.status !== 'COMPLETED') {
+                        await prisma.order.update({
+                            where: { id: orderId },
+                            data: {
+                                status: 'PAID',
+                                updatedAt: new Date()
+                            }
+                        });
+                        console.log(`Order #${orderId} set to PAID via MerchantOrder`);
+                        await fulfillOrder(orderId);
+                    }
+                }
+            }
         }
 
         return NextResponse.json({ success: true })

@@ -36,4 +36,11 @@ export async function fulfillOrder(orderId: number) {
             }
         }
     }
+
+    // Mark as COMPLETED to prevent re-fulfillment
+    await prisma.order.update({
+        where: { id: orderId },
+        data: { status: 'COMPLETED' }
+    })
+    console.log(`Order #${orderId} fulfillment completed.`);
 }
