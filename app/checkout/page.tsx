@@ -116,7 +116,7 @@ export default function CheckoutPage() {
                                                 <p className="text-sm text-gray-400">{t('checkout', 'quantity')}: {item.quantity}</p>
                                             </div>
                                             <div className="text-right">
-                                                <div className="text-lg font-bold text-white mb-2">${(item.price * item.quantity).toFixed(2)}</div>
+                                                <div className="text-lg font-bold text-white mb-2">R${(item.price * item.quantity).toFixed(2)}</div>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -149,7 +149,7 @@ export default function CheckoutPage() {
                                     <div className="h-px bg-white/10"></div>
                                     <div className="flex justify-between text-xl font-bold text-white">
                                         <span>{t('checkout', 'total')}</span>
-                                        <span className="text-primary">${total.toFixed(2)}</span>
+                                        <span className="text-primary">R${total.toFixed(2)}</span>
                                     </div>
                                 </div>
 
