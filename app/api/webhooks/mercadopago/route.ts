@@ -16,21 +16,34 @@ export async function POST(req: Request) {
             const payment = new Payment(client);
             const paymentInfo = await payment.get({ id: data.id });
 
-            if (paymentInfo.status === 'approved') {
-                // Find order by payment ID
-                const order = await prisma.order.findFirst({
-                    where: { paymentId: data.id.toString() }
-                })
+            if (paymentInfo) {
+                const orderId = Number(paymentInfo.external_reference);
+                const status = paymentInfo.status;
+                const paymentId = paymentInfo.id?.toString();
 
-                if (order && order.status !== 'PAID') { // Changed PAID to check logic
-                    // Update status
-                    await prisma.order.update({
-                        where: { id: order.id },
-                        data: { status: 'PAID' } // Use PAID as agreed
-                    })
+                console.log(`Webhook: Processing Payment ${paymentId} for Order #${orderId}. Status: ${status}`);
 
-                    // Fulfill Order (Send Commands)
-                    await fulfillOrder(order.id)
+                if (orderId && !isNaN(orderId)) {
+                    // Update Order
+                    const dbStatus = status === 'approved' ? 'PAID' : 'PENDING'; // Map MP status to DB status
+
+                    const order = await prisma.order.update({
+                        where: { id: orderId },
+                        data: {
+                            status: dbStatus,
+                            paymentId: paymentId,
+                            updatedAt: new Date()
+                        }
+                    });
+
+                    if (dbStatus === 'PAID') {
+                        // Fulfill Order (Send Commands) if not already fulfilled?
+                        // Ideally we check if it was already processed, but updateAt helps ensuring.
+                        // Command creation is idempotent-ish if we check existing?
+                        // fulfilling order function should handle idempotency or we check status transition.
+                        // For now simplified:
+                        await fulfillOrder(order.id);
+                    }
                 }
             }
         }

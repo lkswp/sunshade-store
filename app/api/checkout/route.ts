@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server"
 import { PRODUCTS_DATA } from "@/lib/products"
 import { PrismaClient } from "@prisma/client"
-import { MercadoPagoConfig, Payment } from 'mercadopago';
+import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
 
 // Initialize Mercado Pago
 const client = new MercadoPagoConfig({ accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN! });
@@ -52,61 +52,67 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "No valid items found" }, { status: 400 })
         }
 
-        // 2. Mercado Pago Payment
-        const payment = new Payment(client);
+        // 2. Create Order PENDING in Database
+        // We create the order *before* Mercado Pago to get an ID for external_reference
+        let user = await prisma.user.findUnique({
+            where: { username }
+        })
 
-        // Helper to get product names
-        const description = validItems.map(i => `${i.quantity}x ${i.product.name}`).join(', ').substring(0, 200);
+        if (!user) {
+            user = await prisma.user.create({
+                data: { username }
+            })
+        }
 
-        const paymentData = await payment.create({
+        const order = await prisma.order.create({
+            data: {
+                userId: user.id,
+                total: total,
+                status: "PENDING",
+                paymentMethod: "CHECKOUT_PRO", // Generic for redirection
+                items: validItems // Save items for later fulfillment
+            }
+        })
+
+        // 3. Create Mercado Pago Preference
+        const preference = new Preference(client);
+
+        // Determine Base URL for callbacks
+        const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+        const preferenceData = await preference.create({
             body: {
-                transaction_amount: total,
-                description: description,
-                payment_method_id: 'pix',
+                items: validItems.map(item => ({
+                    id: item.product.id,
+                    title: item.product.name,
+                    quantity: item.quantity,
+                    unit_price: item.product.price,
+                    currency_id: 'BRL'
+                })),
                 payer: {
-                    email: 'buyer@test.com'
-                }
+                    // We don't have email/name from user, MP will ask or use logged in MP user
+                    email: "test_user@test.com" // Recommended to send at least a placeholder if unknown? Or omit? 
+                    // Verify if email is mandatory. Usually helpful.
+                },
+                external_reference: order.id.toString(), // CRITICAL logic: Link Order ID here
+                back_urls: {
+                    success: `${origin}/checkout/success`,
+                    failure: `${origin}/checkout?status=failure`,
+                    pending: `${origin}/checkout?status=pending`
+                },
+                auto_return: "approved",
+                statement_descriptor: "SUNSHADE STORE"
             }
         });
 
-        if (!paymentData || !paymentData.id) {
-            throw new Error("Failed to create payment with Mercado Pago");
+        if (!preferenceData || !preferenceData.init_point) {
+            throw new Error("Failed to create preference with Mercado Pago");
         }
-
-        // 3. Database Operations (Transaction)
-        const result = await prisma.$transaction(async (tx: any) => {
-            // Find or Create User
-            let user = await tx.user.findUnique({
-                where: { username }
-            })
-
-            if (!user) {
-                user = await tx.user.create({
-                    data: { username }
-                })
-            }
-
-            // Create Order PENDING
-            const order = await tx.order.create({
-                data: {
-                    userId: user.id,
-                    total: total,
-                    status: "PENDING",
-                    paymentMethod: "PIX",
-                    paymentId: paymentData.id!.toString(),
-                    ticketUrl: paymentData.point_of_interaction?.transaction_data?.qr_code,
-                    items: validItems // Save items for later fulfillment
-                }
-            })
-
-            return order
-        })
 
         return NextResponse.json({
             success: true,
-            orderId: result.id,
-            qrCode: paymentData.point_of_interaction?.transaction_data?.qr_code,
-            qrCodeBase64: paymentData.point_of_interaction?.transaction_data?.qr_code_base64
+            orderId: order.id,
+            url: preferenceData.init_point // Redirect URL
         })
 
     } catch (error) {

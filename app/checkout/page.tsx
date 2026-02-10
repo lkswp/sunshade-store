@@ -25,11 +25,7 @@ export default function CheckoutPage() {
     const { items, removeItem, total, clearCart, username } = useCart()
     const [isProcessing, setIsProcessing] = useState(false)
     const [coupon, setCoupon] = useState("")
-    const [isSuccess, setIsSuccess] = useState(false)
-    const [paymentMethod, setPaymentMethod] = useState("pix")
     const [agreedToTerms, setAgreedToTerms] = useState(false)
-
-    const [pixData, setPixData] = useState<{ code: string, base64: string } | null>(null)
 
     const handleCheckout = async () => {
         if (!agreedToTerms) {
@@ -68,18 +64,13 @@ export default function CheckoutPage() {
                 throw new Error(data.error || 'Checkout failed')
             }
 
-            setIsProcessing(false)
-            setIsSuccess(true)
-            clearCart()
-
-            if (data.qrCode && data.qrCodeBase64) {
-                setPixData({ code: data.qrCode, base64: data.qrCodeBase64 })
+            if (data.url) {
+                // Redirect to Mercado Pago
+                window.location.href = data.url
+            } else {
+                throw new Error("Invalid response from server")
             }
 
-            toast.success(t('checkout', 'success_title'), {
-                description: t('checkout', 'success_msg'),
-                style: { background: '#051405', borderColor: '#98D121', color: 'white' }
-            })
         } catch (error) {
             setIsProcessing(false)
             toast.error(t('checkout', 'checkout_failed'), {
@@ -87,70 +78,6 @@ export default function CheckoutPage() {
                 style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
             })
         }
-    }
-
-    if (isSuccess) {
-        return (
-            <div className="min-h-screen bg-background flex flex-col font-sans">
-                <Navbar />
-                <main className="container flex-1 py-16 px-4 flex flex-col items-center justify-center text-center">
-                    {pixData ? (
-                        <div className="max-w-md w-full bg-card/30 p-8 rounded-3xl border border-white/10 animate-in zoom-in duration-500">
-                            <div className="size-16 bg-[#00BFA5]/20 rounded-full flex items-center justify-center mb-6 mx-auto">
-                                <span className="text-3xl">💠</span>
-                            </div>
-                            <h1 className="text-3xl font-bold text-white mb-2">{t('checkout', 'scan_pay')}</h1>
-                            <p className="text-gray-400 mb-6">{t('checkout', 'scan_desc')}</p>
-
-                            <div className="bg-white p-4 rounded-xl mb-6 inline-block">
-                                <img
-                                    src={`data:image/jpeg;base64,${pixData.base64}`}
-                                    alt="PIX QR Code"
-                                    className="w-64 h-64"
-                                />
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="p-3 bg-black/40 rounded-lg border border-white/5 break-all text-xs text-gray-400 font-mono">
-                                    {pixData.code}
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    className="w-full border-[#00BFA5] text-[#00BFA5] hover:bg-[#00BFA5]/10"
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(pixData.code)
-                                        toast.success(t('checkout', 'pix_copied'))
-                                    }}
-                                >
-                                    {t('checkout', 'copy_pix')}
-                                </Button>
-                            </div>
-
-                            <p className="mt-6 text-sm text-gray-500">
-                                {t('checkout', 'paid_verify')}
-                            </p>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="size-24 bg-primary/20 rounded-full flex items-center justify-center mb-6 animate-in zoom-in duration-500">
-                                <CheckCircle className="size-12 text-primary" />
-                            </div>
-                            <h1 className="text-4xl font-bold text-white mb-4">{t('checkout', 'success_title')}</h1>
-                            <p className="text-xl text-gray-400 max-w-md mb-8">
-                                {t('checkout', 'success_msg')}
-                            </p>
-                        </>
-                    )}
-
-                    <div className="mt-8">
-                        <Link href="/">
-                            <Button size="lg" variant="minecraft">{t('checkout', 'return_home')}</Button>
-                        </Link>
-                    </div>
-                </main>
-                <Footer />
-            </div>
-        )
     }
 
     return (
@@ -223,20 +150,6 @@ export default function CheckoutPage() {
                                     <div className="flex justify-between text-xl font-bold text-white">
                                         <span>{t('checkout', 'total')}</span>
                                         <span className="text-primary">${total.toFixed(2)}</span>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 mb-8">
-                                    <label className="text-sm font-bold text-gray-400 uppercase">Payment Method</label>
-                                    <div className="grid grid-cols-1 gap-4">
-                                        <button
-                                            onClick={() => setPaymentMethod("pix")}
-                                            className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === "pix" ? "border-[#00BFA5] bg-[#00BFA5]/10 text-white" : "border-white/10 bg-black/20 text-gray-400 hover:bg-white/5"}`}
-                                        >
-                                            <span className="text-3xl">💠</span>
-                                            <span className="text-lg font-bold">{t('checkout', 'pix_method')}</span>
-                                            <span className="text-xs text-[#00BFA5] font-mono">{t('checkout', 'instant_approval')}</span>
-                                        </button>
                                     </div>
                                 </div>
 
@@ -313,6 +226,15 @@ export default function CheckoutPage() {
                                 >
                                     {isProcessing ? t('checkout', 'processing') : t('checkout', 'complete_purchase')}
                                 </Button>
+
+                                <div className="mt-4 flex justify-center gap-4 opacity-50">
+                                    <CreditCard className="size-6 text-white" />
+                                    <span className="text-3xl">💠</span>
+                                    <span className="text-2xl">📄</span>
+                                </div>
+                                <p className="text-center text-xs text-gray-500 mt-2">
+                                    Secured by Mercado Pago
+                                </p>
 
                             </div>
                         </div>
