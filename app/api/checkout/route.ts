@@ -143,47 +143,60 @@ export async function POST(request: Request) {
             // --- CHECKOUT PRO (REDIRECT) ---
             const preference = new Preference(client);
 
-            const preferenceData = await preference.create({
-                body: {
-                    items: validItems.map(item => {
-                        // Apply discount proportionally to items for MP display or adds a discount item?
-                        // Easiest is to add a generic "Discount" item with negative price or adjust unit prices.
-                        // However, Mercado Pago doesn't support negative unit_price easily in all flows.
-                        // Best approach: Adjust unit prices proportionally.
-                        const originalPrice = item.product.price
-                        const discountedPrice = originalPrice - (originalPrice * (discount / 100))
+            const preferenceBody = {
+                items: validItems.map(item => {
+                    const originalPrice = item.product.price
+                    const discountedPrice = originalPrice - (originalPrice * (discount / 100))
 
-                        return {
-                            id: item.product.id,
-                            title: item.product.name,
-                            quantity: item.quantity,
-                            unit_price: Number(discountedPrice.toFixed(2)), // Ensure 2 decimals
-                            currency_id: 'BRL',
-                            category_id: 'virtual_goods'
-                        }
-                    }),
-                    payer: {
-                        email: email || `${username}@sunshade.store`
-                    },
-                    external_reference: order.id.toString(),
-                    back_urls: {
-                        success: `${origin}/checkout/success`,
-                        failure: `${origin}/checkout?status=failure`,
-                        pending: `${origin}/checkout?status=pending`
-                    },
-                    auto_return: "approved",
-                    statement_descriptor: "SUNSHADE STORE"
-                }
-            });
+                    return {
+                        id: item.product.id,
+                        title: item.product.name,
+                        quantity: item.quantity,
+                        unit_price: Number(discountedPrice.toFixed(2)),
+                        currency_id: 'BRL',
+                    }
+                }),
+                payer: {
+                    email: email || `${username}@sunshade.store`
+                },
+                external_reference: order.id.toString(),
+                notification_url: `${origin}/api/webhooks/mercadopago`,
+                back_urls: {
+                    success: `${origin}/checkout/success`,
+                    failure: `${origin}/checkout?status=failure`,
+                    pending: `${origin}/checkout?status=pending`
+                },
+                auto_return: "approved" as const,
+                statement_descriptor: "SUNSHADE STORE"
+            }
 
-            if (!preferenceData || !preferenceData.init_point) {
+            console.log("Creating MP Preference with body:", JSON.stringify(preferenceBody, null, 2));
+
+            const preferenceData = await preference.create({ body: preferenceBody });
+
+            console.log("MP Preference Response:", JSON.stringify({
+                id: preferenceData.id,
+                init_point: preferenceData.init_point,
+                sandbox_init_point: preferenceData.sandbox_init_point,
+            }, null, 2));
+
+            // Use sandbox_init_point for test credentials (APP_USR-), init_point for production (APP_USR-)
+            // Test credentials: sandbox_init_point
+            // Production credentials: init_point
+            const isTestMode = process.env.MERCADO_PAGO_ACCESS_TOKEN?.startsWith('TEST-');
+            const redirectUrl = isTestMode
+                ? preferenceData.sandbox_init_point
+                : preferenceData.init_point;
+
+            if (!preferenceData || !redirectUrl) {
+                console.error("No redirect URL available. init_point:", preferenceData.init_point, "sandbox_init_point:", preferenceData.sandbox_init_point);
                 throw new Error("Failed to create preference with Mercado Pago");
             }
 
             return NextResponse.json({
                 success: true,
                 orderId: order.id,
-                url: preferenceData.init_point // Redirect URL
+                url: redirectUrl
             })
         }
 
