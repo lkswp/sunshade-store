@@ -73,6 +73,9 @@ export async function POST(request: Request) {
             }
         })
 
+        // Determine Base URL for callbacks
+        const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
         // 3. Handle Payment based on Method
         if (body.paymentMethod === 'PIX') {
             // --- DIRECT PIX ---
@@ -110,9 +113,6 @@ export async function POST(request: Request) {
         } else {
             // --- CHECKOUT PRO (REDIRECT) ---
             const preference = new Preference(client);
-
-            // Determine Base URL for callbacks
-            const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
             const preferenceData = await preference.create({
                 body: {
