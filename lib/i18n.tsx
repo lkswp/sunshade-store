@@ -65,6 +65,7 @@ const translations: Translations = {
             success_msg: "Compra iniciada para o usuário",
             error_title: "Erro",
             error_msg: "Falha ao processar pedido.",
+            no_products: "Nenhum produto encontrado para este servidor.",
         },
         products: {
             rank_vip_name: "Rank VIP",
@@ -242,6 +243,7 @@ const translations: Translations = {
             success_msg: "Purchase initiated for user",
             error_title: "Error",
             error_msg: "Failed to process request.",
+            no_products: "No products found for this server.",
         },
         products: {
             rank_vip_name: "VIP Rank",

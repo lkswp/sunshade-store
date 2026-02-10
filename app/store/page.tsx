@@ -124,7 +124,7 @@ export default function StorePage() {
                                         <div className="text-4xl">🏰</div>
                                         <div>
                                             <h3 className={`text-xl font-bold ${selectedServer === 'survival' ? 'text-primary' : 'text-white group-hover:text-primary'} transition-colors`}>{t('store', 'survival_rpg')}</h3>
-                                            <p className="text-sm text-gray-400 mt-1">Quests, dungeons, and epic loot.</p>
+                                            <p className="text-sm text-gray-400 mt-1">{t('store', 'survival_desc_short')}</p>
                                         </div>
                                         {selectedServer === 'survival' && (
                                             <div className="absolute top-4 right-4 text-primary animate-in zoom-in spin-in-90 duration-300">
@@ -144,7 +144,7 @@ export default function StorePage() {
                                         <div className="text-4xl">💣</div>
                                         <div>
                                             <h3 className={`text-xl font-bold ${selectedServer === 'anarchy' ? 'text-secondary' : 'text-white group-hover:text-secondary'} transition-colors`}>{t('store', 'semi_anarchy')}</h3>
-                                            <p className="text-sm text-gray-400 mt-1">Raiding, PvP, and no grief protection.</p>
+                                            <p className="text-sm text-gray-400 mt-1">{t('store', 'anarchy_desc_short')}</p>
                                         </div>
                                         {selectedServer === 'anarchy' && (
                                             <div className="absolute top-4 right-4 text-secondary animate-in zoom-in spin-in-90 duration-300">
@@ -207,7 +207,7 @@ export default function StorePage() {
                                         />
                                     )) : (
                                         <div className="col-span-full text-center py-10 text-gray-500">
-                                            No products found for this server.
+                                            {t('store', 'no_products')}
                                         </div>
                                     )}
                                 </div>
