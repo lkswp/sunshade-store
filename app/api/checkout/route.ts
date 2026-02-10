@@ -166,6 +166,11 @@ export async function POST(request: Request) {
                     failure: `${origin}/checkout?status=failure`,
                     pending: `${origin}/checkout?status=pending`
                 },
+                payment_methods: {
+                    excluded_payment_types: [
+                        { id: "bank_transfer" },  // Exclude PIX (bank_transfer type) - we have direct PIX on our site
+                    ]
+                },
                 auto_return: "approved" as const,
                 statement_descriptor: "SUNSHADE STORE"
             }
