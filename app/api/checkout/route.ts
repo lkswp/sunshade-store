@@ -101,7 +101,8 @@ export async function POST(request: Request) {
         })
 
         // Determine Base URL for callbacks
-        const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+        // IMPORTANT: Use NEXT_PUBLIC_BASE_URL for webhook (must be publicly reachable by Mercado Pago)
+        const origin = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "http://localhost:3000";
 
         // 3. Handle Payment based on Method
         if (body.paymentMethod === 'PIX') {
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
                     payment_method_id: 'pix',
                     external_reference: order.id.toString(),
                     payer: {
-                        email: "test_user@test.com" // In production, collect valid email
+                        email: `${username}@sunshade.store`
                     },
                     notification_url: `${origin}/api/webhooks/mercadopago` // Webhook URL
                 }
@@ -161,7 +162,7 @@ export async function POST(request: Request) {
                         }
                     }),
                     payer: {
-                        email: "test_user@test.com"
+                        email: `${username}@sunshade.store`
                     },
                     external_reference: order.id.toString(),
                     back_urls: {
@@ -170,7 +171,6 @@ export async function POST(request: Request) {
                         pending: `${origin}/checkout?status=pending`
                     },
                     auto_return: "approved",
-                    binary_mode: true, // IMPORTANT: Forces instant payment decision (good for avoiding pending)
                     statement_descriptor: "SUNSHADE STORE"
                 }
             });

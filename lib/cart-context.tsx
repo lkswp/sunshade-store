@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 
 export interface CartItem {
     id: string;
@@ -52,7 +52,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('username', username);
     }, [username]);
 
-    const addItem = (newItem: Omit<CartItem, 'quantity'>) => {
+    const addItem = useCallback((newItem: Omit<CartItem, 'quantity'>) => {
         setItems(prev => {
             const existing = prev.find(item => item.id === newItem.id);
             if (existing) {
@@ -64,20 +64,34 @@ export function CartProvider({ children }: { children: ReactNode }) {
             }
             return [...prev, { ...newItem, quantity: 1 }];
         });
-    };
+    }, []);
 
-    const removeItem = (id: string) => {
+    const removeItem = useCallback((id: string) => {
         setItems(prev => prev.filter(item => item.id !== id));
-    };
+    }, []);
 
-    const clearCart = () => {
+    const clearCart = useCallback(() => {
         setItems([]);
-    };
+    }, []);
 
-    const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const handleSetUsername = useCallback((name: string) => {
+        setUsername(name);
+    }, []);
+
+    const total = useMemo(() => items.reduce((sum, item) => sum + (item.price * item.quantity), 0), [items]);
+
+    const value = useMemo(() => ({
+        items,
+        addItem,
+        removeItem,
+        clearCart,
+        total,
+        username,
+        setUsername: handleSetUsername
+    }), [items, addItem, removeItem, clearCart, total, username, handleSetUsername]);
 
     return (
-        <CartContext.Provider value={{ items, addItem, removeItem, clearCart, total, username, setUsername }}>
+        <CartContext.Provider value={value}>
             {children}
         </CartContext.Provider>
     );

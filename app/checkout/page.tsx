@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Navbar } from "@/components/ui/navbar"
 import { Footer } from "@/components/ui/footer"
 import { Button } from "@/components/ui/button"
@@ -29,6 +29,46 @@ export default function CheckoutPage() {
     const [agreedToTerms, setAgreedToTerms] = useState(false)
     const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CHECKOUT_PRO'>('PIX')
     const [pixData, setPixData] = useState<{ qrCode: string, qrCodeBase64: string, ticketUrl: string } | null>(null)
+    const [pixPaymentId, setPixPaymentId] = useState<string | null>(null)
+    const pollingRef = useRef<NodeJS.Timeout | null>(null)
+
+    // PIX Payment Polling - check every 5 seconds if payment was approved
+    useEffect(() => {
+        if (pixData && pixPaymentId) {
+            pollingRef.current = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/checkout/check-status?paymentId=${pixPaymentId}`)
+                    const data = await res.json()
+
+                    if (data.status === 'PAID') {
+                        // Payment confirmed!
+                        if (pollingRef.current) clearInterval(pollingRef.current)
+                        clearCart()
+                        toast.success("Pagamento Confirmado! ✅", {
+                            description: "Seus itens serão entregues em instantes.",
+                            style: { background: '#051405', borderColor: '#98D121', color: 'white' }
+                        })
+                        setTimeout(() => {
+                            window.location.href = '/checkout/success'
+                        }, 2000)
+                    } else if (data.status === 'REJECTED') {
+                        if (pollingRef.current) clearInterval(pollingRef.current)
+                        toast.error("Pagamento Rejeitado", {
+                            style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
+                        })
+                        setPixData(null)
+                        setPixPaymentId(null)
+                    }
+                } catch (e) {
+                    // Ignore polling errors, will retry
+                }
+            }, 5000) // Check every 5 seconds
+        }
+
+        return () => {
+            if (pollingRef.current) clearInterval(pollingRef.current)
+        }
+    }, [pixData, pixPaymentId, clearCart])
 
     const finalTotal = Math.max(0, total - (total * (discount / 100)))
 
@@ -99,9 +139,10 @@ export default function CheckoutPage() {
                 // Redirect to Mercado Pago
                 window.location.href = data.url
             } else if (data.pixData) {
-                // Show PIX Modal
+                // Show PIX Modal + start polling
                 setPixData(data.pixData)
-                setIsProcessing(false) // Stop processing state to show modal
+                setPixPaymentId(data.pixData.paymentId?.toString() || null)
+                setIsProcessing(false)
                 toast.success("QR Code Gerado!", {
                     description: "Escaneie o código para pagar.",
                     style: { background: '#051405', borderColor: '#98D121', color: 'white' }
