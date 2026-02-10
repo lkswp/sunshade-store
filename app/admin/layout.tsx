@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { LayoutDashboard, ShoppingCart, LogOut } from "lucide-react"
+import { LayoutDashboard, ShoppingCart, LogOut, Ticket } from "lucide-react"
 import { logoutAdmin } from "@/app/actions/admin"
 import { Button } from "@/components/ui/button"
 
@@ -27,6 +27,12 @@ export default function AdminLayout({
                         <Button variant="ghost" className="w-full justify-start gap-2 hover:bg-zinc-800">
                             <ShoppingCart className="size-4" />
                             Orders
+                        </Button>
+                    </Link>
+                    <Link href="/admin/coupons">
+                        <Button variant="ghost" className="w-full justify-start gap-2 hover:bg-zinc-800">
+                            <Ticket className="size-4" />
+                            Coupons
                         </Button>
                     </Link>
                 </nav>
