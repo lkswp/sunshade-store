@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 import { LanguageProvider } from "@/lib/i18n";
 import { Toaster } from "sonner";
 import { CartProvider } from "@/lib/cart-context";
+import AnalyticsTracker from "@/components/analytics-tracker";
 
 export default function RootLayout({
   children,
@@ -36,6 +37,7 @@ export default function RootLayout({
       >
         <LanguageProvider>
           <CartProvider>
+            <AnalyticsTracker />
             {children}
             <Toaster position="bottom-right" theme="dark" richColors closeButton />
           </CartProvider>
