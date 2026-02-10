@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json()
-        const { items, username, couponCode } = body
+        const { items, username, email, couponCode } = body
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return NextResponse.json({ error: "Cart is empty" }, { status: 400 })
@@ -162,20 +162,26 @@ export async function POST(request: Request) {
                             category_id: 'virtual_goods'
                         }
                     }),
-                },
-                /*
-                 * Removing payer email to let user fill it on Mercado Pago side.
-                 * Pre-filling with invalid or incomplete data can disable the Pay button.
-                 */
-                external_reference: order.id.toString(),
-                back_urls: {
-                    success: `${origin}/checkout/success`,
-                    failure: `${origin}/checkout?status=failure`,
-                    pending: `${origin}/checkout?status=pending`
-                },
-                auto_return: "approved",
-                statement_descriptor: "SUNSHADE STORE"
-            success: true,
+                    payer: {
+                        email: email || `${username}@sunshade.store`
+                    },
+                    external_reference: order.id.toString(),
+                    back_urls: {
+                        success: `${origin}/checkout/success`,
+                        failure: `${origin}/checkout?status=failure`,
+                        pending: `${origin}/checkout?status=pending`
+                    },
+                    auto_return: "approved",
+                    statement_descriptor: "SUNSHADE STORE"
+                }
+            });
+
+            if (!preferenceData || !preferenceData.init_point) {
+                throw new Error("Failed to create preference with Mercado Pago");
+            }
+
+            return NextResponse.json({
+                success: true,
                 orderId: order.id,
                 url: preferenceData.init_point // Redirect URL
             })

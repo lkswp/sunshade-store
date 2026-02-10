@@ -22,6 +22,7 @@ import {
 
 export default function CheckoutPage() {
     const { items, removeItem, total, clearCart, username } = useCart()
+    const [email, setEmail] = useState("")
     const [isProcessing, setIsProcessing] = useState(false)
     const [couponCode, setCouponCode] = useState("")
     const [discount, setDiscount] = useState(0)
@@ -112,6 +113,22 @@ export default function CheckoutPage() {
             return
         }
 
+        if (paymentMethod === 'CHECKOUT_PRO' && !email) {
+            toast.error("Email Necessário", {
+                description: "Por favor, informe um email para o Mercado Pago.",
+                style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
+            })
+            return
+        }
+
+        if (paymentMethod === 'CHECKOUT_PRO' && !/\S+@\S+\.\S+/.test(email)) {
+            toast.error("Email Inválido", {
+                description: "Por favor, informe um email válido.",
+                style: { background: '#200505', borderColor: '#C41E3A', color: 'white' }
+            })
+            return
+        }
+
         setIsProcessing(true)
         setPixData(null)
 
@@ -124,6 +141,7 @@ export default function CheckoutPage() {
                 body: JSON.stringify({
                     items: items,
                     username: username,
+                    email: email,
                     paymentMethod: paymentMethod,
                     couponCode: couponApplied ? couponCode : null // Send coupon if applied
                 }),
@@ -330,6 +348,21 @@ export default function CheckoutPage() {
                                         {paymentMethod === 'CHECKOUT_PRO' && <div className="ml-auto text-primary"><CheckCircle className="size-5" /></div>}
                                     </div>
                                 </div>
+
+                                {/* Email Input for Checkout Pro */}
+                                {paymentMethod === 'CHECKOUT_PRO' && (
+                                    <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                                        <label className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-2 block">Email para Pagamento</label>
+                                        <Input
+                                            type="email"
+                                            placeholder="seu@email.com"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="bg-black/20 border-white/10 text-white"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Necessário para liberar o pagamento no Mercado Pago.</p>
+                                    </div>
+                                )}
 
                                 <div className="flex gap-2 mb-8">
                                     <Input
