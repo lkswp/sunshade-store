@@ -53,7 +53,6 @@ export async function POST(request: Request) {
         }
 
         // 2. Create Order PENDING in Database
-        // We create the order *before* Mercado Pago to get an ID for external_reference
         let user = await prisma.user.findUnique({
             where: { username }
         })
@@ -69,51 +68,87 @@ export async function POST(request: Request) {
                 userId: user.id,
                 total: total,
                 status: "PENDING",
-                paymentMethod: "CHECKOUT_PRO", // Generic for redirection
-                items: validItems // Save items for later fulfillment
+                paymentMethod: body.paymentMethod === 'PIX' ? 'PIX' : 'CHECKOUT_PRO',
+                items: validItems
             }
         })
 
-        // 3. Create Mercado Pago Preference
-        const preference = new Preference(client);
+        // 3. Handle Payment based on Method
+        if (body.paymentMethod === 'PIX') {
+            // --- DIRECT PIX ---
+            const payment = new Payment(client);
+            const paymentData = await payment.create({
+                body: {
+                    transaction_amount: total,
+                    description: "Sunshade Store",
+                    payment_method_id: 'pix',
+                    external_reference: order.id.toString(),
+                    payer: {
+                        email: "test_user@test.com" // In production, collect valid email
+                    },
+                    notification_url: `${origin}/api/webhooks/mercadopago` // Webhook URL
+                }
+            });
 
-        // Determine Base URL for callbacks
-        const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-
-        const preferenceData = await preference.create({
-            body: {
-                items: validItems.map(item => ({
-                    id: item.product.id,
-                    title: item.product.name,
-                    quantity: item.quantity,
-                    unit_price: item.product.price,
-                    currency_id: 'BRL',
-                    category_id: 'virtual_goods'
-                })),
-                payer: {
-                    email: "test_user@test.com"
-                },
-                external_reference: order.id.toString(),
-                back_urls: {
-                    success: `${origin}/checkout/success`,
-                    failure: `${origin}/checkout?status=failure`,
-                    pending: `${origin}/checkout?status=pending`
-                },
-                auto_return: "approved",
-                binary_mode: true,
-                statement_descriptor: "SUNSHADE STORE"
+            if (!paymentData || !paymentData.point_of_interaction) {
+                throw new Error("Failed to generate PIX QR Code");
             }
-        });
 
-        if (!preferenceData || !preferenceData.init_point) {
-            throw new Error("Failed to create preference with Mercado Pago");
+            const pixData = {
+                qrCode: paymentData.point_of_interaction.transaction_data?.qr_code,
+                qrCodeBase64: paymentData.point_of_interaction.transaction_data?.qr_code_base64,
+                ticketUrl: paymentData.point_of_interaction.transaction_data?.ticket_url,
+                paymentId: paymentData.id
+            }
+
+            return NextResponse.json({
+                success: true,
+                orderId: order.id,
+                pixData: pixData
+            })
+
+        } else {
+            // --- CHECKOUT PRO (REDIRECT) ---
+            const preference = new Preference(client);
+
+            // Determine Base URL for callbacks
+            const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+            const preferenceData = await preference.create({
+                body: {
+                    items: validItems.map(item => ({
+                        id: item.product.id,
+                        title: item.product.name,
+                        quantity: item.quantity,
+                        unit_price: item.product.price,
+                        currency_id: 'BRL',
+                        category_id: 'virtual_goods'
+                    })),
+                    payer: {
+                        email: "test_user@test.com"
+                    },
+                    external_reference: order.id.toString(),
+                    back_urls: {
+                        success: `${origin}/checkout/success`,
+                        failure: `${origin}/checkout?status=failure`,
+                        pending: `${origin}/checkout?status=pending`
+                    },
+                    auto_return: "approved",
+                    binary_mode: true,
+                    statement_descriptor: "SUNSHADE STORE"
+                }
+            });
+
+            if (!preferenceData || !preferenceData.init_point) {
+                throw new Error("Failed to create preference with Mercado Pago");
+            }
+
+            return NextResponse.json({
+                success: true,
+                orderId: order.id,
+                url: preferenceData.init_point // Redirect URL
+            })
         }
-
-        return NextResponse.json({
-            success: true,
-            orderId: order.id,
-            url: preferenceData.init_point // Redirect URL
-        })
 
     } catch (error) {
         console.error("Checkout Error Details:", error)

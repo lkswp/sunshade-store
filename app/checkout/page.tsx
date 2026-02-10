@@ -26,6 +26,8 @@ export default function CheckoutPage() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [coupon, setCoupon] = useState("")
     const [agreedToTerms, setAgreedToTerms] = useState(false)
+    const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CHECKOUT_PRO'>('PIX')
+    const [pixData, setPixData] = useState<{ qrCode: string, qrCodeBase64: string, ticketUrl: string } | null>(null)
 
     const handleCheckout = async () => {
         if (!agreedToTerms) {
@@ -45,6 +47,7 @@ export default function CheckoutPage() {
         }
 
         setIsProcessing(true)
+        setPixData(null)
 
         try {
             const response = await fetch('/api/checkout', {
@@ -54,7 +57,8 @@ export default function CheckoutPage() {
                 },
                 body: JSON.stringify({
                     items: items,
-                    username: username
+                    username: username,
+                    paymentMethod: paymentMethod // Send selected method
                 }),
             })
 
@@ -67,6 +71,14 @@ export default function CheckoutPage() {
             if (data.url) {
                 // Redirect to Mercado Pago
                 window.location.href = data.url
+            } else if (data.pixData) {
+                // Show PIX Modal
+                setPixData(data.pixData)
+                setIsProcessing(false) // Stop processing state to show modal
+                toast.success("QR Code Gerado!", {
+                    description: "Escaneie o código para pagar.",
+                    style: { background: '#051405', borderColor: '#98D121', color: 'white' }
+                })
             } else {
                 throw new Error("Invalid response from server")
             }
@@ -80,6 +92,15 @@ export default function CheckoutPage() {
         }
     }
 
+    const copyPix = () => {
+        if (pixData?.qrCode) {
+            navigator.clipboard.writeText(pixData.qrCode)
+            toast.success("Código PIX Copiado!", {
+                style: { background: '#051405', borderColor: '#98D121', color: 'white' }
+            })
+        }
+    }
+
     return (
         <div className="min-h-screen bg-background flex flex-col font-sans">
             <Navbar />
@@ -89,6 +110,64 @@ export default function CheckoutPage() {
                     <ShoppingBag className="size-8 text-primary" />
                     {t('checkout', 'title')}
                 </h1>
+
+                {/* PIX MODAL if pixData exists */}
+                <Dialog open={!!pixData} onOpenChange={(open) => {
+                    if (!open) setPixData(null) // Allow closing
+                }}>
+                    <DialogContent className="bg-[#1a0b2e] border-white/10 text-white sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="text-center text-2xl font-bold text-primary flex items-center justify-center gap-2">
+                                <span className="text-3xl">💠</span> Pagamento via PIX
+                            </DialogTitle>
+                            <DialogDescription className="text-center text-gray-400">
+                                Escaneie o QR Code ou copie o código abaixo.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex flex-col items-center gap-6 py-4">
+                            {pixData?.qrCodeBase64 && (
+                                <div className="bg-white p-4 rounded-xl">
+                                    <img
+                                        src={`data:image/png;base64,${pixData.qrCodeBase64}`}
+                                        alt="PIX QR Code"
+                                        className="w-64 h-64 object-contain"
+                                    />
+                                </div>
+                            )}
+
+                            <div className="w-full space-y-2">
+                                <p className="text-xs text-center text-gray-500 uppercase tracking-widest">Copia e Cola</p>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={pixData?.qrCode || ''}
+                                        readOnly
+                                        className="bg-black/50 border-white/10 font-mono text-xs text-gray-300"
+                                    />
+                                    <Button onClick={copyPix} variant="outline" size="icon" className="shrink-0 border-white/10 hover:bg-white/10">
+                                        <CheckCircle className="size-4" />
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="text-center space-y-2">
+                                <p className="text-sm text-yellow-500 animate-pulse">
+                                    Aguardando pagamento...
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    Assim que pagar, você receberá seus itens em até 5 minutos.
+                                </p>
+                            </div>
+
+                            <Button
+                                className="w-full"
+                                variant="outline"
+                                onClick={() => window.location.href = '/checkout/success'}
+                            >
+                                Já Paguei
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
 
                 {items.length === 0 ? (
                     <div className="text-center py-20 bg-card/30 rounded-3xl border border-white/5">
@@ -150,6 +229,35 @@ export default function CheckoutPage() {
                                     <div className="flex justify-between text-xl font-bold text-white">
                                         <span>{t('checkout', 'total')}</span>
                                         <span className="text-primary">R${total.toFixed(2)}</span>
+                                    </div>
+                                </div>
+
+                                {/* Payment Method Selection */}
+                                <div className="mb-8 space-y-3">
+                                    <label className="text-sm font-bold text-gray-300 uppercase tracking-wider">Forma de Pagamento</label>
+
+                                    <div
+                                        onClick={() => setPaymentMethod('PIX')}
+                                        className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${paymentMethod === 'PIX' ? 'border-primary bg-primary/10' : 'border-white/10 bg-black/20 hover:bg-white/5'}`}
+                                    >
+                                        <div className="text-2xl">💠</div>
+                                        <div>
+                                            <div className="font-bold text-white">PIX (Instantâneo)</div>
+                                            <div className="text-xs text-gray-400">Gerar QR Code agora</div>
+                                        </div>
+                                        {paymentMethod === 'PIX' && <div className="ml-auto text-primary"><CheckCircle className="size-5" /></div>}
+                                    </div>
+
+                                    <div
+                                        onClick={() => setPaymentMethod('CHECKOUT_PRO')}
+                                        className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${paymentMethod === 'CHECKOUT_PRO' ? 'border-primary bg-primary/10' : 'border-white/10 bg-black/20 hover:bg-white/5'}`}
+                                    >
+                                        <div className="text-2xl">💳</div>
+                                        <div>
+                                            <div className="font-bold text-white">Mercado Pago</div>
+                                            <div className="text-xs text-gray-400">Cartão, Boleto, PayPal</div>
+                                        </div>
+                                        {paymentMethod === 'CHECKOUT_PRO' && <div className="ml-auto text-primary"><CheckCircle className="size-5" /></div>}
                                     </div>
                                 </div>
 
