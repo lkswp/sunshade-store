@@ -41,7 +41,7 @@ export function ProductCard({ id, name, price, description, image, onBuy }: Prod
             </CardHeader>
             <CardContent className="flex-1">
                 <div className="text-3xl font-extrabold text-white text-shadow-sm">
-                    ${price.toFixed(2)}
+                    R${price.toFixed(2)}
                 </div>
             </CardContent>
             <CardFooter>

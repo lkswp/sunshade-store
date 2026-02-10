@@ -87,20 +87,20 @@ export async function POST(request: Request) {
                     title: item.product.name,
                     quantity: item.quantity,
                     unit_price: item.product.price,
-                    currency_id: 'BRL'
+                    currency_id: 'BRL',
+                    category_id: 'virtual_goods'
                 })),
                 payer: {
-                    // We don't have email/name from user, MP will ask or use logged in MP user
-                    email: "test_user@test.com" // Recommended to send at least a placeholder if unknown? Or omit? 
-                    // Verify if email is mandatory. Usually helpful.
+                    email: "test_user@test.com"
                 },
-                external_reference: order.id.toString(), // CRITICAL logic: Link Order ID here
+                external_reference: order.id.toString(),
                 back_urls: {
                     success: `${origin}/checkout/success`,
                     failure: `${origin}/checkout?status=failure`,
                     pending: `${origin}/checkout?status=pending`
                 },
                 auto_return: "approved",
+                binary_mode: true,
                 statement_descriptor: "SUNSHADE STORE"
             }
         });

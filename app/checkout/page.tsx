@@ -140,11 +140,11 @@ export default function CheckoutPage() {
                                 <div className="space-y-4 mb-8">
                                     <div className="flex justify-between text-gray-400">
                                         <span>{t('checkout', 'subtotal')}</span>
-                                        <span>${total.toFixed(2)}</span>
+                                        <span>R${total.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between text-gray-400">
                                         <span>{t('checkout', 'taxes')}</span>
-                                        <span>$0.00</span>
+                                        <span>R$0.00</span>
                                     </div>
                                     <div className="h-px bg-white/10"></div>
                                     <div className="flex justify-between text-xl font-bold text-white">

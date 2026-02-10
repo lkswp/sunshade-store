@@ -39,7 +39,7 @@ export default function AdminDashboard() {
                         <DollarSign className="size-4 text-emerald-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+                        <div className="text-2xl font-bold">R${stats.totalRevenue.toFixed(2)}</div>
                         <p className="text-xs text-gray-500">Lifetime earnings</p>
                     </CardContent>
                 </Card>
@@ -103,7 +103,7 @@ export default function AdminDashboard() {
                                     fontSize={12}
                                     tickLine={false}
                                     axisLine={false}
-                                    tickFormatter={(value) => `$${value}`}
+                                    tickFormatter={(value) => `R$${value}`}
                                 />
                                 <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                                 <Tooltip
@@ -140,10 +140,10 @@ export default function AdminDashboard() {
                                         </p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-sm font-medium text-white">${order.total.toFixed(2)}</p>
+                                        <p className="text-sm font-medium text-white">R${order.total.toFixed(2)}</p>
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full ${order.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-500' :
-                                                order.status === 'PENDING' ? 'bg-orange-500/20 text-orange-500' :
-                                                    'bg-red-500/20 text-red-500'
+                                            order.status === 'PENDING' ? 'bg-orange-500/20 text-orange-500' :
+                                                'bg-red-500/20 text-red-500'
                                             }`}>
                                             {order.status}
                                         </span>

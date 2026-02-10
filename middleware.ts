@@ -8,11 +8,6 @@ export async function middleware(request: NextRequest) {
     if (path.startsWith('/admin')) {
         // Public admin routes (login)
         if (path === '/admin/login') {
-            // If already logged in, redirect to dashboard
-            const adminSession = request.cookies.get('admin_session')
-            if (adminSession?.value === process.env.ADMIN_SECRET) {
-                return NextResponse.redirect(new URL('/admin', request.url))
-            }
             return NextResponse.next()
         }
 

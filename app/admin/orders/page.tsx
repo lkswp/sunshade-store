@@ -77,12 +77,12 @@ export default function AdminOrdersPage() {
                                         {format(new Date(order.createdAt), "MMM dd, yyyy HH:mm")}
                                     </TableCell>
                                     <TableCell className="text-emerald-400 font-bold">
-                                        ${order.total.toFixed(2)}
+                                        R${order.total.toFixed(2)}
                                     </TableCell>
                                     <TableCell>
                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-500' :
-                                                order.status === 'PENDING' ? 'bg-orange-500/20 text-orange-500' :
-                                                    'bg-red-500/20 text-red-500'
+                                            order.status === 'PENDING' ? 'bg-orange-500/20 text-orange-500' :
+                                                'bg-red-500/20 text-red-500'
                                             }`}>
                                             {order.status}
                                         </span>
