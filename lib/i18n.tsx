@@ -4,13 +4,34 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 type Language = 'pt' | 'en';
 
-interface Translations {
-    [key: string]: {
-        [key: string]: string | any;
+interface TranslationData {
+    nav: { [key: string]: string };
+    hero: { [key: string]: string };
+    features: { [key: string]: string };
+    store: { [key: string]: string };
+    products: { [key: string]: string };
+    rules: {
+        title: string;
+        section1_title: string;
+        section1_list: string[];
+        section2_title: string;
+        section2_list: string[];
+        section3_title?: string;
+        section3_list?: string[];
+        section4_title?: string;
+        section4_list?: string[];
+        section5_title?: string;
+        section5_list?: string[];
+        [key: string]: string | string[] | undefined;
     };
+    discord: { [key: string]: string };
+    footer: { [key: string]: string };
+    checkout: { [key: string]: string };
+    terms: { [key: string]: string };
+    [key: string]: { [key: string]: string | string[] | any } | any;
 }
 
-const translations: Translations = {
+const translations: Record<Language, TranslationData> = {
     pt: {
         nav: {
             home: "Início",
@@ -23,7 +44,7 @@ const translations: Translations = {
             title_part1: "A AVENTURA",
             title_part2: "ESPERA",
             description: "Junte-se à melhor experiência de Minecraft. Encantamentos personalizados, biomas únicos e uma comunidade que parece casa.",
-            copy_ip: "Copiar IP: jogar.sunshade.net",
+            copy_ip: "Copiar IP: sunshade.com.br",
             visit_store: "Visitar Loja",
             ip_copied: "IP Copiado!",
             status_online: "Online e Estável",
@@ -201,7 +222,7 @@ const translations: Translations = {
             title_part1: "ADVENTURE",
             title_part2: "AWAITS",
             description: "Join the ultimate Minecraft experience. Custom enchants, unique biomes, and a community that feels like home.",
-            copy_ip: "Copy IP: play.sunshade.net",
+            copy_ip: "Copy IP: sunshade.com.br",
             visit_store: "Visit Store",
             ip_copied: "IP Copied!",
             status_online: "Online & Stable",

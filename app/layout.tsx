@@ -13,10 +13,32 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sunshade",
-  description: "Official store for Sunshade Minecraft Server",
+  title: "Sunshade | A Aventura Espera",
+  description: "Junte-se à melhor experiência de Minecraft. Encantamentos personalizados, biomas únicos e uma comunidade que parece casa.",
   icons: {
     icon: "/logo.png",
+  },
+  openGraph: {
+    title: "Sunshade | A Aventura Espera",
+    description: "Junte-se à melhor experiência de Minecraft. Encantamentos personalizados, biomas únicos e uma comunidade que parece casa.",
+    url: "https://sunshade.com.br",
+    siteName: "Sunshade Store",
+    images: [
+      {
+        url: "/hero-bg.png", // Assuming this image exists and is suitable
+        width: 1200,
+        height: 630,
+        alt: "Sunshade Minecraft Server",
+      },
+    ],
+    locale: "pt_BR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sunshade | A Aventura Espera",
+    description: "Junte-se à melhor experiência de Minecraft. Encantamentos personalizados, biomas únicos e uma comunidade que parece casa.",
+    images: ["/hero-bg.png"],
   },
 };
 
