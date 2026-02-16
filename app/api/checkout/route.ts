@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { PRODUCTS_DATA } from "@/lib/products"
 import { PrismaClient } from "@prisma/client"
 import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
+import { fulfillOrder } from "@/lib/order-service";
 
 // Initialize Mercado Pago
 const client = new MercadoPagoConfig({ accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN! });
@@ -90,11 +91,13 @@ export async function POST(request: Request) {
             })
         }
 
+        const isFree = finalTotal === 0;
+
         const order = await prisma.order.create({
             data: {
                 userId: user.id,
                 total: finalTotal, // Save discounted total
-                status: "PENDING",
+                status: isFree ? "PAID" : "PENDING",
                 paymentMethod: body.paymentMethod === 'PIX' ? 'PIX' : 'CHECKOUT_PRO',
                 items: validItems
             }
@@ -107,6 +110,20 @@ export async function POST(request: Request) {
         if (!origin.startsWith("http")) {
             origin = `https://${origin}`;
         }
+
+        // --- HANDLE FREE ORDERS (100% DISCOUNT) ---
+        if (isFree) {
+            console.log(`Processing FREE order #${order.id}`);
+            await fulfillOrder(order.id);
+
+            return NextResponse.json({
+                success: true,
+                orderId: order.id,
+                url: `${origin}/checkout/success`
+            })
+        }
+
+
 
         // 3. Handle Payment based on Method
         if (body.paymentMethod === 'PIX') {
