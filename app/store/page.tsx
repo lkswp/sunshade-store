@@ -18,6 +18,7 @@ interface Product {
     category: string
     image?: string | null
     commands: any
+    previewItems?: any[]
 }
 
 export default function StorePage() {
@@ -203,6 +204,7 @@ export default function StorePage() {
                                             key={product.id}
                                             {...product}
                                             image={product.image || undefined}
+                                            previewItems={product.previewItems}
                                             onBuy={handleAddToCart}
                                         />
                                     )) : (

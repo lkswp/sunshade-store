@@ -17,6 +17,11 @@ export async function GET() {
     }
 }
 
+// Helper to strip Minecraft color codes
+function stripColors(text: string): string {
+    return text.replace(/§[0-9a-fk-or]/g, '');
+}
+
 // POST: Sync product from plugin
 export async function POST(req: Request) {
     try {
@@ -31,32 +36,37 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { id, name, description, price, category, image, commands, active } = body;
+        const { id, name, description, price, category, image, commands, active, previewItems } = body;
 
         // Basic validation
         if (!id || !name || !price || !category || !commands) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
+        const cleanName = stripColors(name);
+        const cleanDescription = stripColors(description);
+
         const product = await prisma.product.upsert({
             where: { id },
             update: {
-                name,
-                description,
+                name: cleanName,
+                description: cleanDescription,
                 price,
                 category,
                 image,
                 commands,
+                previewItems: previewItems || undefined,
                 active: active !== undefined ? active : true,
             },
             create: {
                 id,
-                name,
-                description,
+                name: cleanName,
+                description: cleanDescription,
                 price,
                 category,
                 image,
                 commands,
+                previewItems: previewItems || undefined,
                 active: active !== undefined ? active : true,
             },
         });

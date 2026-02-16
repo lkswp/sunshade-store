@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useLanguage } from "@/lib/i18n"
+import { ItemPreviewDialog } from "@/components/store/item-preview-dialog"
 
 interface ProductProps {
     id: string
@@ -12,15 +13,24 @@ interface ProductProps {
     description: string
     image?: string
     onBuy: (id: string) => void
+    previewItems?: any[]
 }
 
-export function ProductCard({ id, name, price, description, image, onBuy }: ProductProps) {
+export function ProductCard({ id, name, price, description, image, onBuy, previewItems }: ProductProps) {
     const { t } = useLanguage()
 
     return (
         <Card className="flex flex-col overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(152,209,33,0.15)] border bg-card/50 backdrop-blur-sm border-white/5 hover:border-primary/50 group">
             <div className="aspect-square relative bg-gradient-to-br from-white/5 to-transparent p-6 flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+                {/* Preview Button */}
+                {previewItems && previewItems.length > 0 && (
+                    <div className="absolute top-2 right-2 z-20">
+                        <ItemPreviewDialog items={previewItems} productName={name} />
+                    </div>
+                )}
+
                 {image && (image.startsWith('http') || image.startsWith('/')) ? (
                     <Image
                         src={image}

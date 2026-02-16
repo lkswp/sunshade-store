@@ -53,6 +53,7 @@ model Product {
   category    String // global, survival, anarchy
   image       String?
   commands    Json
+  previewItems Json?
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
