@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Eye } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLanguage } from "@/lib/i18n"
+import { getTranslatedMaterial, getTranslatedEnchantment, getItemIconUrl } from "@/lib/minecraft-data"
+import Image from "next/image"
 
 interface Item {
     material: string
@@ -49,17 +51,25 @@ export function ItemPreviewDialog({ items, productName }: ItemPreviewDialogProps
                         <div className="grid grid-cols-1 gap-2">
                             {items.map((item, index) => (
                                 <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-black/20 border border-white/5 hover:border-primary/20 transition-colors">
-                                    <div className="h-10 w-10 rounded-md bg-[#0f0f1a] flex items-center justify-center border border-white/5">
-                                        {/* Placeholder for item icon based on material if needed */}
-                                        <span className="text-xs text-gray-500">{item.amount}x</span>
+                                    <div className="h-10 w-10 rounded-md bg-[#0f0f1a] flex items-center justify-center border border-white/5 relative overflow-hidden group/item">
+                                        <Image
+                                            src={getItemIconUrl(item.material)}
+                                            alt={item.material}
+                                            fill
+                                            className="object-contain p-1"
+                                            unoptimized
+                                        />
+                                        <div className="absolute bottom-0 right-0 bg-black/80 px-1 rounded-tl-sm text-[10px] font-bold text-white z-10">
+                                            {item.amount}
+                                        </div>
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium text-sm truncate text-white">
-                                            {item.name || formatMaterialName(item.material)}
+                                            {item.name ? item.name : getTranslatedMaterial(item.material)}
                                         </p>
                                         {item.enchants && item.enchants.length > 0 && (
                                             <p className="text-xs text-primary/80 truncate">
-                                                {item.enchants.join(", ")}
+                                                {item.enchants.map(e => getTranslatedEnchantment(e)).join(", ")}
                                             </p>
                                         )}
                                     </div>
@@ -71,13 +81,4 @@ export function ItemPreviewDialog({ items, productName }: ItemPreviewDialogProps
             </DialogContent>
         </Dialog>
     )
-}
-
-function formatMaterialName(material: string): string {
-    return material
-        .toLowerCase()
-        .replace(/_/g, ' ')
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
 }

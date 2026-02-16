@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useLanguage } from "@/lib/i18n"
 import { ItemPreviewDialog } from "@/components/store/item-preview-dialog"
+import { getItemIconUrl } from "@/lib/minecraft-data"
 
 interface ProductProps {
     id: string
@@ -37,6 +38,14 @@ export function ProductCard({ id, name, price, description, image, onBuy, previe
                         alt={name}
                         fill
                         className="object-contain p-4 transition-transform duration-500 group-hover:rotate-3 group-hover:scale-110"
+                    />
+                ) : previewItems && previewItems.length > 0 ? (
+                    <Image
+                        src={getItemIconUrl(previewItems[0].material)}
+                        alt={name}
+                        fill
+                        className="object-contain p-4 transition-transform duration-500 group-hover:rotate-3 group-hover:scale-110 rendering-pixelated"
+                        unoptimized
                     />
                 ) : (
                     <div className="text-6xl filter drop-shadow-[0_0_10px_rgba(152,209,33,0.3)] transition-transform duration-500 group-hover:scale-125">
